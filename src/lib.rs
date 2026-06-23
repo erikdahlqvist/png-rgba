@@ -9,6 +9,16 @@ struct PngChunk {
     crc: u32,
 }
 
+struct PngHeader {
+    width: u32,
+    height: u32,
+    bit_depth: u8,
+    color_type: u8,
+    comp_type: u8,
+    filter_type: u8,
+    interl_type: u8,
+}
+
 pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
     let input = match fs::read(path) {
         Ok(input) => input,
@@ -40,5 +50,34 @@ pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
         chunks.push(PngChunk { length, chunk_type, data, crc });
     }
 
+    let header = extract_header(&chunks)?;
+
     Ok(vec![]) // Temp return
+}
+
+fn extract_header(chunks: &Vec<PngChunk>) -> Result<PngHeader, String> {
+    let header_chunks: Vec<&PngChunk> = chunks.iter().filter(|c| c.chunk_type == u32::from_be_bytes(*b"IHDR")).collect();
+
+    if header_chunks.is_empty() {
+        return Err(String::from("No IHDR chunks where found"));
+    } else if header_chunks.len() > 1 {
+        return Err(String::from("More than one IHDR chunk was found"));
+    }
+
+    let header_chunk = header_chunks[0];
+    if header_chunk.length != 13 {
+        return Err(format!("IHDR length was {} bytes instead of expected 13 bytes", header_chunk.length));
+    }
+
+    let data = &header_chunk.data;
+
+    Ok(PngHeader {
+        width: u32::from_be_bytes(data[0..4].try_into().unwrap()),
+        height: u32::from_be_bytes(data[4..8].try_into().unwrap()),
+        bit_depth: data[8],
+        color_type: data[9],
+        comp_type: data[10],
+        filter_type: data[11],
+        interl_type: data[12],
+    })
 }
