@@ -1,4 +1,6 @@
-use std::fs;
+use std::{fs, io::Read};
+
+use flate2::read::ZlibDecoder;
 
 const PNG_SIGN: &[u8] = &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
@@ -52,6 +54,9 @@ pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
 
     let header = extract_header(&chunks)?;
 
+    let compressed_data = extract_data_segments(&chunks)?;
+    let data = decompress_data(&compressed_data);
+
     Ok(vec![]) // Temp return
 }
 
@@ -80,4 +85,22 @@ fn extract_header(chunks: &Vec<PngChunk>) -> Result<PngHeader, String> {
         filter_type: data[11],
         interl_type: data[12],
     })
+}
+
+fn extract_data_segments(chunks: &Vec<PngChunk>) -> Result<Vec<u8>, String> {
+    let data_chunks: Vec<&PngChunk> = chunks.iter().filter(|c| c.chunk_type == u32::from_be_bytes(*b"IDAT")).collect();
+
+    if data_chunks.is_empty() {
+        return Err(String::from("Found no data chunks"));
+    }
+
+    Ok(data_chunks.iter().flat_map(|c| c.data.clone()).collect())
+}
+
+fn decompress_data(data: &Vec<u8>) -> Vec<u8> {
+    let mut decoder = ZlibDecoder::new(data.as_slice());
+    let mut decompressed = Vec::new();
+    decoder.read_to_end(&mut decompressed).unwrap();
+
+    decompressed
 }
