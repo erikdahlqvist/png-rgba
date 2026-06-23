@@ -57,7 +57,9 @@ pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
     let compressed_data = extract_data_segments(&chunks)?;
     let data = decompress_data(&compressed_data);
 
-    Ok(vec![]) // Temp return
+    let output = defilter(&data, &header)?;
+
+    Ok(output)
 }
 
 fn extract_header(chunks: &Vec<PngChunk>) -> Result<PngHeader, String> {
@@ -103,4 +105,63 @@ fn decompress_data(data: &Vec<u8>) -> Vec<u8> {
     decoder.read_to_end(&mut decompressed).unwrap();
 
     decompressed
+}
+
+fn defilter(data: &Vec<u8>, header: &PngHeader) -> Result<Vec<Vec<u8>>, String> {
+    // TODO: make defilter work for non RGBA
+    let bits_per_pixel = header.bit_depth * 4;
+    let bytes_per_scanline = header.width * bits_per_pixel as u32 / 8 + 1;
+
+    let mut unfiltered: Vec<Vec<u8>> = Vec::new();
+    for (i, scanline) in data.chunks(bytes_per_scanline as usize).enumerate() {
+        let filter = scanline[0];
+
+        let mut row: Vec<u8> = Vec::with_capacity(scanline.len() - 1);
+
+        for j in 0..scanline.len() - 1 {
+            let left = if j < 4 {
+                0
+            } else {
+                row[j - 4]
+            };
+            let up = if unfiltered.is_empty() {
+                0
+            } else {
+                unfiltered[i - 1][j]
+            };
+            let up_left = if unfiltered.is_empty() || j < 4 {
+                0
+            } else {
+                unfiltered[i - 1][j - 4]
+            };
+
+            match filter {
+                0 => row.push(scanline[j + 1]),
+                1 => row.push(scanline[j + 1].wrapping_add(left)),
+                2 => row.push(scanline[j + 1].wrapping_add(up)),
+                3 => row.push(scanline[j + 1].wrapping_add(((left as u16 + up as u16) / 2) as u8)),
+                4 => row.push(scanline[j + 1].wrapping_add(paeth(left, up, up_left))),
+                x => return Err(format!("Type {x} is not implemented")),
+            }
+        }
+
+        unfiltered.push(row);
+    }
+
+    Ok(unfiltered)
+}
+
+fn paeth(left: u8, up: u8, up_left: u8) -> u8 {
+    let p: i16 = left as i16 + up as i16 - up_left as i16;
+    let pa = p.abs_diff(left as i16);
+    let pb = p.abs_diff(up as i16);
+    let pc = p.abs_diff(up_left as i16);
+
+    if pa <= pb && pa <= pc {
+        left
+    } else if pb <= pc {
+        up
+    } else {
+        up_left
+    }
 }
