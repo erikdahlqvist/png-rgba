@@ -21,7 +21,7 @@ struct PngHeader {
     interl_type: u8,
 }
 
-pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
+pub fn decode_png(path: &str) -> Result<Vec<Vec<u8>>, String> {
     let input = match fs::read(path) {
         Ok(input) => input,
         Err(_) => return Err(format!("Could not read file at: {path}")),
@@ -45,8 +45,10 @@ pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
         let data = input[i..i + length as usize].to_vec();
         i += length as usize;
 
-        // TODO: verify checksum
         let crc = u32::from_be_bytes(input[i..i + 4].try_into().unwrap());
+        if crc != crc32(&input[i - 4 - length as usize..i]) {
+            return Err(String::from("Checksum does not match"));
+        }
         i += 4;
 
         chunks.push(PngChunk { length, chunk_type, data, crc });
@@ -60,6 +62,24 @@ pub fn png(path: &str) -> Result<Vec<Vec<u8>>, String> {
     let output = defilter(&data, &header)?;
 
     Ok(output)
+}
+
+fn crc32(data: &[u8]) -> u32 {
+    let mut crc = 0xFFFFFFFF_u32;
+
+    for &byte in data {
+        crc ^= byte as u32;
+
+        for _ in 0..8 {
+            if crc & 1 != 0{
+                crc = (crc >> 1) ^ 0xEDB88320;
+                continue;
+            }
+            crc >>= 1;
+        }
+    }
+
+    !crc
 }
 
 fn extract_header(chunks: &Vec<PngChunk>) -> Result<PngHeader, String> {
