@@ -135,14 +135,14 @@ fn defilter(data: &Vec<u8>, header: &PngHeader) -> Result<Vec<Vec<u8>>, String> 
                 unfiltered[i - 1][j - 4]
             };
 
-            match filter {
-                0 => row.push(scanline[j + 1]),
-                1 => row.push(scanline[j + 1].wrapping_add(left)),
-                2 => row.push(scanline[j + 1].wrapping_add(up)),
-                3 => row.push(scanline[j + 1].wrapping_add(((left as u16 + up as u16) / 2) as u8)),
-                4 => row.push(scanline[j + 1].wrapping_add(paeth(left, up, up_left))),
+            row.push(match filter {
+                0 => scanline[j + 1],
+                1 => scanline[j + 1].wrapping_add(left),
+                2 => scanline[j + 1].wrapping_add(up),
+                3 => scanline[j + 1].wrapping_add(((left as u16 + up as u16) / 2) as u8),
+                4 => scanline[j + 1].wrapping_add(paeth(left, up, up_left)),
                 x => return Err(format!("Type {x} is not implemented")),
-            }
+            });
         }
 
         unfiltered.push(row);
