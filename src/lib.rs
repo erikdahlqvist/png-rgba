@@ -78,7 +78,7 @@ fn extract_header(chunks: &Vec<PngChunk>) -> Result<PngHeader, String> {
 
     let data = &header_chunk.data;
 
-    Ok(PngHeader {
+    let header = PngHeader {
         width: u32::from_be_bytes(data[0..4].try_into().unwrap()),
         height: u32::from_be_bytes(data[4..8].try_into().unwrap()),
         bit_depth: data[8],
@@ -86,7 +86,17 @@ fn extract_header(chunks: &Vec<PngChunk>) -> Result<PngHeader, String> {
         comp_type: data[10],
         filter_type: data[11],
         interl_type: data[12],
-    })
+    };
+
+    if header.comp_type != 0 {
+        return Err(String::from("Compression type has a non zero value"));
+    } else if header.filter_type != 0 {
+        return Err(String::from("Filter type has a non zero value"));
+    } else if header.interl_type > 1 {
+        return Err(String::from("Interlacing type has a value greater than 1"));
+    }
+
+    Ok(header)
 }
 
 fn extract_data_segments(chunks: &Vec<PngChunk>) -> Result<Vec<u8>, String> {
