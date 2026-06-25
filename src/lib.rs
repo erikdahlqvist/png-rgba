@@ -74,11 +74,7 @@ fn crc32(data: &[u8]) -> u32 {
         crc ^= byte as u32;
 
         for _ in 0..8 {
-            if crc & 1 != 0{
-                crc = (crc >> 1) ^ 0xEDB88320;
-                continue;
-            }
-            crc >>= 1;
+            crc = (crc >> 1) ^ (0xEDB88320 & (0u32.wrapping_sub(crc & 1)));
         }
     }
 
