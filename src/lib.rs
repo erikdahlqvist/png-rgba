@@ -67,15 +67,32 @@ pub fn decode_png(path: &str) -> Result<Vec<Vec<u8>>, Error> {
     Ok(output)
 }
 
+const fn crc32_table() -> [u32; 256] {
+    let mut table = [0; 256];
+    let mut i = 0;
+
+    while i < 256 {
+        let mut crc = i;
+        let mut j = 0;
+
+        while j < 8 {
+            crc = (crc >> 1) ^ (0xEDB88320 & (0u32.wrapping_sub(crc & 1)));
+            j += 1;
+        }
+
+        table[i as usize] = crc;
+        i += 1;
+    }
+
+    table
+}
+
 fn crc32(data: &[u8]) -> u32 {
+    let table = crc32_table();
     let mut crc = 0xFFFFFFFF_u32;
 
     for &byte in data {
-        crc ^= byte as u32;
-
-        for _ in 0..8 {
-            crc = (crc >> 1) ^ (0xEDB88320 & (0u32.wrapping_sub(crc & 1)));
-        }
+        crc = table[((crc ^ byte as u32) & 0xFF) as usize] ^ (crc >> 8);
     }
 
     !crc
