@@ -77,6 +77,16 @@ pub fn decode_png(path: &str) -> Result<Vec<Vec<u8>>, Error> {
                 i -= 3;
             }
         }
+    } else if header.color_type == 4 {
+        for row in output.iter_mut() {
+            let mut i = row.len();
+            while i > 0 {
+                let temp = [row[i - 2], row[i - 2]];
+                row.splice(i - 1..i - 1, temp);
+                
+                i -= 2;
+            }
+        } 
     }
 
     Ok(output)
@@ -172,6 +182,7 @@ fn defilter(data: &Vec<u8>, header: &PngHeader) -> Result<Vec<Vec<u8>>, Error> {
     // TODO: make defilter work for non RGBA
     let channel_count = match header.color_type {
         2 => 3,
+        4 => 2,
         6 => 4,
         c => return Err(UnrecognizedColorType(c)),
     };

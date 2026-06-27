@@ -93,3 +93,39 @@ fn test_rgb_8bit_png() {
 fn test_rgb_16bit_png() {
     test_rgb_png("tests/images/generated/rgb16-64x64.png", 16);
 }
+
+fn test_grayscale_alpha_png(path: &str, depth: u32) {
+    let result = png_rgba::decode_png(path).unwrap();
+
+    let max_value: usize = 2_usize.pow(depth) - 1;
+    let offset = if depth == 16 {
+        8
+    } else {
+        0
+    };
+
+    const H: usize = 64;
+    const W: usize = 64;
+
+    for y in 0..H {
+        for x in 0..W {
+            let g = x * max_value / (W - 1) >> offset;
+            let a = y * max_value / (H - 1) >> offset;
+
+            assert!(g == result[y][4 * x] as usize);
+            assert!(g == result[y][4 * x + 1] as usize);
+            assert!(g == result[y][4 * x + 2] as usize);
+            assert!(a == result[y][4 * x + 3] as usize);
+        }
+    }
+}
+
+#[test]
+fn test_grayscale_alpha_8bit_png() {
+    test_grayscale_alpha_png("tests/images/generated/grayscale-alpha8-64x64.png", 8);
+}
+
+#[test]
+fn test_grayscale_alpha_16bit_png() {
+    test_grayscale_alpha_png("tests/images/generated/grayscale-alpha16-64x64.png", 16);
+}

@@ -35,7 +35,34 @@ def gen_rgb(depth, alpha):
         )
         writer.write(f, rows)
 
+def gen_grayscale_alpha(depth):
+    rows = []
+    max_value = 2**depth - 1
+
+    for y in range(H):
+        row = []
+
+        for x in range(W):
+            g = (x * max_value) // (W - 1)
+            a = (y * max_value) // (H - 1)
+
+            row.extend([g, a])
+    
+        rows.append(row)
+    
+    with open(f"grayscale-alpha{depth}-{W}x{H}.png", "wb") as f:
+        writer = png.Writer(
+            width=W,
+            height=H,
+            alpha=True,
+            bitdepth=depth,
+            greyscale=True,
+        )
+        writer.write(f, rows)
+
 gen_rgb(8, True)
 gen_rgb(16, True)
 gen_rgb(8, False)
 gen_rgb(16, False)
+gen_grayscale_alpha(8)
+gen_grayscale_alpha(16)
