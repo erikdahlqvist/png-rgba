@@ -62,7 +62,12 @@ pub fn decode_png(path: &str) -> Result<Vec<Vec<u8>>, Error> {
     let compressed_data = extract_data_segments(&chunks)?;
     let data = decompress_data(&compressed_data);
 
-    let output = defilter(&data, &header)?;
+    let mut output = defilter(&data, &header)?;
+
+    // Remove every other byte to convert from 16-bit to 8-bit
+    if header.bit_depth == 16 {
+        output = output.iter().map(|row| row.iter().enumerate().filter_map(|(x, &p)| (x % 2 == 0).then_some(p)).collect()).collect();
+    }
 
     Ok(output)
 }
