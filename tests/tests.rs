@@ -17,3 +17,25 @@ fn test_checksum_invalid_png() {
     let result = png_rgba::decode_png("tests/images/invalid-checksum.png");
     assert!(result == Err(InvalidChecksum))
 }
+
+#[test]
+fn test_rgba_8bit_png() {
+    let result = png_rgba::decode_png("tests/images/generated/rgba8-64x64.png").unwrap();
+
+    const H: usize = 64;
+    const W: usize = 64;
+
+    for y in 0..H {
+        for x in 0..W {
+            let r = x * 255 / (W - 1);
+            let g = y * 255 / (H - 1);
+            let b = 127;
+            let a = ((x + y) * 255) / (W + H - 2);
+
+            assert!(r == result[y][4 * x] as usize);
+            assert!(g == result[y][4 * x + 1] as usize);
+            assert!(b == result[y][4 * x + 2] as usize);
+            assert!(a == result[y][4 * x + 3] as usize);
+        }
+    }
+}
