@@ -69,6 +69,16 @@ pub fn decode_png(path: &str) -> Result<Vec<Vec<u8>>, Error> {
         output = output.iter().map(|row| row.iter().enumerate().filter_map(|(x, &p)| (x % 2 == 0).then_some(p)).collect()).collect();
     }
 
+    if header.color_type == 2 {
+        for row in output.iter_mut() {
+            let mut i = row.len();
+            while i > 0 {
+                row.insert(i, 255);
+                i -= 3;
+            }
+        }
+    }
+
     Ok(output)
 }
 
@@ -160,7 +170,12 @@ fn decompress_data(data: &Vec<u8>) -> Vec<u8> {
 
 fn defilter(data: &Vec<u8>, header: &PngHeader) -> Result<Vec<Vec<u8>>, Error> {
     // TODO: make defilter work for non RGBA
-    let bits_per_pixel = header.bit_depth * 4;
+    let channel_count = match header.color_type {
+        2 => 3,
+        6 => 4,
+        c => return Err(UnrecognizedColorType(c)),
+    };
+    let bits_per_pixel = header.bit_depth * channel_count;
     let bytes_per_scanline = header.width * bits_per_pixel as u32 / 8 + 1;
 
     let mut unfiltered: Vec<Vec<u8>> = Vec::new();

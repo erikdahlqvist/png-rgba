@@ -11,4 +11,5 @@ pub enum Error {
     NonZeroFilterType,
     InterlacingTypeGreaterThanOne,
     UnrecognizedFilterType(u8),
+    UnrecognizedColorType(u8),
 }
