@@ -3,27 +3,31 @@ import png
 W = 64
 H = 64
 
-rows = []
+def gen_rgba(depth):
+    rows = []
+    max_value = 2**depth - 1
 
-for y in range(H):
-    row = []
+    for y in range(H):
+        row = []
 
-    for x in range(W):
-        r = (x * 255) // (W - 1)
-        g = (y * 255) // (H - 1)
-        b = 127
-        a = ((x + y) * 255) // (W + H - 2)
+        for x in range(W):
+            r = (x * max_value) // (W - 1)
+            g = (y * max_value) // (H - 1)
+            b = max_value // 2
+            a = ((x + y) * max_value) // (W + H - 2)
+            row.extend([r, g, b, a])
 
-        row.extend([r, g, b, a])
+        rows.append(row)
 
-    rows.append(row)
+    with open(f"rgba{depth}-{W}x{H}.png", "wb") as f:
+        writer = png.Writer(
+            width=W,
+            height=H,
+            alpha=True,
+            bitdepth=depth,
+            greyscale=False,
+        )
+        writer.write(f, rows)
 
-with open("rgba8-64x64.png", "wb") as f:
-    writer = png.Writer(
-        width=W,
-        height=H,
-        alpha=True,
-        bitdepth=8,
-        greyscale=False,
-    )
-    writer.write(f, rows)
+gen_rgba(8)
+gen_rgba(16)
